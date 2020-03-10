@@ -3,6 +3,7 @@
 # === Preamble ======================================================
 
 ## Load libraries ----
+library(forcats)
 library(ggplot2)
 library(magrittr)
 library(rvest)
