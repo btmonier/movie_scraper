@@ -159,12 +159,12 @@ for (i in seq_len(length(media))) {
 
 
 ## Row bind media types ----
-media_data <- do.call("rbind", media_data)
+media_data_final <- do.call("rbind", media_data)
 
 
 ## Parse media values (test) ----
 film <- "Alien"
-media_data[which(media_data$title == film), ]$bluray_ratings %>%
+media_data_final[which(media_data_final$title == film), ]$bluray_ratings %>%
     strsplit(split = ";") %>%
     .[[1]] %>%
     trimws() %>%
@@ -182,7 +182,7 @@ media_data[which(media_data$title == film), ]$bluray_ratings %>%
     )
 
 
-media_data %>%
+media_data_final %>%
     ggplot() +
     aes(x = forcats::fct_infreq(distributor) %>% forcats::fct_rev()) +
     geom_bar() +
