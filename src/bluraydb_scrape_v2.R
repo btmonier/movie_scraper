@@ -170,7 +170,6 @@ for (i in seq_len(length(media))) {
             rvest::html_nodes("span.subheading.grey a.grey") %>%
             rvest::html_text() %>%
             .[3]
-        break
     }
 
     movie_data <- tibble::tibble(
