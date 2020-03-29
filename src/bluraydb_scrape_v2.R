@@ -5,7 +5,7 @@
 # Description:   Scrape blu-ray.com for media metadata
 # Author:        Brandon Monier
 # Created:       2020-03-28 at 21:18:48
-# Last Modified: 2020-03-28 at 21:23:50
+# Last Modified: 2020-03-29 at 12:01:57
 #--------------------------------------------------------------------
 
 #--------------------------------------------------------------------
@@ -137,7 +137,7 @@ for (i in seq_len(length(media))) {
         }
 
         bluray_ratings_tmp <- bluray_ratings_tmp %>%
-            stringr::str_split("(?<=[0-9].[0-9])(?=[A-Za-z])") %>%
+            stringr::str_split("(?<=[0-9].[0-9])(?=[A-Za-z]|4K)") %>%
             unlist() %>%
             stringr::str_replace("\n\n", " = ")
 
@@ -230,5 +230,52 @@ media_data_final %>%
     coord_flip() +
     xlab("Distributor") +
     ylab("Number of films")
+
+
+
+## Blu-ray ratings ----
+html_data <- "https://www.blu-ray.com/movies/Alita-Battle-Angel-4K-and-3D-Blu-ray/240060/" %>%
+    xml2::read_html()
+bluray_ratings_tmp <- html_data %>%
+    rvest::html_nodes("div#bluray_rating table") %>%
+    rvest::html_text()
+
+bluray_ratings_tmp <- bluray_ratings_tmp %>%
+    stringr::str_split("(?<=[0-9].[0-9])(?=[A-Za-z]|4K)") %>%
+    unlist() %>%
+    stringr::str_replace("\n\n", " = ")
+
+if (!any(grepl("^3D", bluray_ratings_tmp))) {
+    bluray_ratings_tmp <- c("3D = 0.0", bluray_ratings_tmp)
+}
+if (!any(grepl("^4K", bluray_ratings_tmp))) {
+    bluray_ratings_tmp <- c("4K = 0.0", bluray_ratings_tmp)
+}
+if (!any(grepl("^Video", bluray_ratings_tmp))) {
+    bluray_ratings_tmp <- c("Video = 0.0", bluray_ratings_tmp)
+}
+if (!any(grepl("^Audio", bluray_ratings_tmp))) {
+    bluray_ratings_tmp <- c("Audio = 0.0", bluray_ratings_tmp)
+}
+if (!any(grepl("^Extras", bluray_ratings_tmp))) {
+    bluray_ratings_tmp <- c("Extras = 0.0", bluray_ratings_tmp)
+}
+bluray_ratings_tmp <- bluray_ratings_tmp[order(bluray_ratings_tmp)]
+paste(bluray_ratings_tmp, collapse = "; ")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
