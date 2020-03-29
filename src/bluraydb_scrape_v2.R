@@ -79,11 +79,17 @@ for (i in seq_len(length(media))) {
     }
 
     url_data   <- url_data %>% unlist()
-    title_data <- title_data %>% unlist()
+    title_data <- title_data %>% unlist
+
+    # Get unique IDs from blu-ray.com
+    br_ids <- url_data %>%
+        stringr::str_extract(pattern = "/(\\d*)/$") %>%
+        stringr::str_replace_all("/", "") %>%
+        as.numeric()
+
 
 
     ## Set up data ----
-    # meta_len <- 20
     meta_len       <- length(url_data)
     distributor    <- vector(mode = "character", length = meta_len)
     genres         <- vector(mode = "character", length = meta_len)
@@ -174,6 +180,7 @@ for (i in seq_len(length(media))) {
 
     movie_data <- tibble::tibble(
         title          = title_data[seq_len(meta_len)],
+        br_id          = br_ids[seq_len(meta_len)],
         media_type     = names(media)[i],
         distributor    = distributor,
         genres         = genres,
@@ -190,36 +197,34 @@ for (i in seq_len(length(media))) {
 ## Row bind media types ----
 media_data_final <- do.call("rbind", media_data)
 
-media_data_final$bluray_ratings %>%
-    gsub("\\n\\n", " = ", .) %>%
-    gsub("^4K", "3D = 0.04K", .) %>%
-    gsub("^Video", "3D = 0.04K = 0.0Video", .) %>%
-    gsub("^; Audio", "3D = 0.04K = 0.0Video = 0.0Audio = 0.0Extras = 0.0", .) %>%
-    gsub("4K", "; 4K", .) %>%
-    gsub("Video", "; Video", .) %>%
-    gsub("Audio", "; Audio", .) %>%
-    gsub("Extras", "; Extras", .)
+
+## Write flat file to disk ----
+readr::write_csv(
+    x = media_data_final,
+    path = "data/media_data.csv"
+)
+
 
 # === Debug =========================================================
 
 ## Parse media values (test) ----
-# film <- "Alien"
-# media_data_final[which(media_data_final$title == film), ]$bluray_ratings %>%
-#     strsplit(split = ";") %>%
-#     .[[1]] %>%
-#     stringr::str_trim() %>%
-#     strsplit(split = " = ") %>%
-#     unlist() %>%
-#     matrix(data = ., nrow = length(.) / 2, byrow = TRUE) %>%
-#     data.frame(stringsAsFactors = FALSE) %>%
-#     set_colnames(c("property", "value")) %>%
-#     tibble::as_tibble() %>%
-#     dplyr::mutate(
-#         property = factor(
-#             property,
-#             levels = c("3D", "4K", "video", "Audio", "Extras")
-#         )
-#     )
+film <- "Alien (1979)"
+media_data_final[which(media_data_final$title == film), ]$bluray_ratings %>%
+    strsplit(split = ";") %>%
+    .[[1]] %>%
+    stringr::str_trim() %>%
+    strsplit(split = " = ") %>%
+    unlist() %>%
+    matrix(data = ., nrow = length(.) / 2, byrow = TRUE) %>%
+    data.frame(stringsAsFactors = FALSE) %>%
+    set_colnames(c("property", "value")) %>%
+    tibble::as_tibble() %>%
+    dplyr::mutate(
+        property = factor(
+            property,
+            levels = c("3D", "4K", "Video", "Audio", "Extras")
+        )
+    )
 
 
 ## Visualize test ----
