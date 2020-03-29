@@ -1,4 +1,23 @@
-# blu ray scraper v2.0
+#!/usr/bin/env Rscript
+
+#--------------------------------------------------------------------
+# Script Name:   bluraydb_media_scraper.R
+# Description:   Scrape blu-ray.com for media metadata
+# Author:        Brandon Monier
+# Created:       2020-03-28 at 21:18:48
+# Last Modified: 2020-03-28 at 21:23:50
+#--------------------------------------------------------------------
+
+#--------------------------------------------------------------------
+# Detailed Purpose:
+#    The main purpose of this Rscript is to scrape through all
+#    pages of my blu-ray.com profile in order to obtain media
+#    information.
+#
+# Note:
+#    This script will only parse metadata related to media (i.e.
+#    physical disc information).
+#--------------------------------------------------------------------
 
 # === Preamble ======================================================
 
@@ -107,14 +126,39 @@ for (i in seq_len(length(media))) {
             .[2] %>%
             as.numeric()
 
+
         # Blu-ray ratings
         if (names(media)[i] == "dvd") {
-            bluray_ratings[k] <- c("3D = 0.0; 4K = 0.0; video = 0.0; Audio = 0.0; Extras = 0.0")
+            bluray_ratings_tmp <- c("Video\n\n0.0Audio\n\n0.0Extras\n\n0.0")
         } else {
-            bluray_ratings[k] <- html_data %>%
+            bluray_ratings_tmp <- html_data %>%
                 rvest::html_nodes("div#bluray_rating table") %>%
                 rvest::html_text()
         }
+
+        bluray_ratings_tmp <- bluray_ratings_tmp %>%
+            stringr::str_split("(?<=[0-9].[0-9])(?=[A-Za-z])") %>%
+            unlist() %>%
+            stringr::str_replace("\n\n", " = ")
+
+        if (!any(grepl("^3D", bluray_ratings_tmp))) {
+            bluray_ratings_tmp <- c("3D = 0.0", bluray_ratings_tmp)
+        }
+        if (!any(grepl("^4K", bluray_ratings_tmp))) {
+            bluray_ratings_tmp <- c("4K = 0.0", bluray_ratings_tmp)
+        }
+        if (!any(grepl("^Video", bluray_ratings_tmp))) {
+            bluray_ratings_tmp <- c("Video = 0.0", bluray_ratings_tmp)
+        }
+        if (!any(grepl("^Audio", bluray_ratings_tmp))) {
+            bluray_ratings_tmp <- c("Audio = 0.0", bluray_ratings_tmp)
+        }
+        if (!any(grepl("^Extras", bluray_ratings_tmp))) {
+            bluray_ratings_tmp <- c("Extras = 0.0", bluray_ratings_tmp)
+        }
+        bluray_ratings_tmp <- bluray_ratings_tmp[order(bluray_ratings_tmp)]
+        bluray_ratings[k] <- paste(bluray_ratings_tmp, collapse = "; ")
+
 
         # Media image
         media_img[k] <- html_data %>%
@@ -126,7 +170,7 @@ for (i in seq_len(length(media))) {
             rvest::html_nodes("span.subheading.grey a.grey") %>%
             rvest::html_text() %>%
             .[3]
-
+        break
     }
 
     movie_data <- tibble::tibble(
@@ -140,48 +184,46 @@ for (i in seq_len(length(media))) {
         release_date   = release_date
     )
 
-
-    movie_data$bluray_ratings <- movie_data$bluray_ratings %>%
-        gsub("\\n\\n", " = ", .) %>%
-        gsub("^4K", "3D = 0.04K", .) %>%
-        gsub("^Video", "3D = 0.04K = 0.0Video", .) %>%
-        gsub("4K", "; 4K", .) %>%
-        gsub("Video", "; Video", .) %>%
-        gsub("Audio", "; Audio", .) %>%
-        gsub("Extras", "; Extras", .)
-
-    movie_data$title <- movie_data$title %>%
-        gsub(" \\(.*\\)", "", .)
-
     media_data[[i]] <- movie_data
-
 }
 
 
 ## Row bind media types ----
 media_data_final <- do.call("rbind", media_data)
 
+media_data_final$bluray_ratings %>%
+    gsub("\\n\\n", " = ", .) %>%
+    gsub("^4K", "3D = 0.04K", .) %>%
+    gsub("^Video", "3D = 0.04K = 0.0Video", .) %>%
+    gsub("^; Audio", "3D = 0.04K = 0.0Video = 0.0Audio = 0.0Extras = 0.0", .) %>%
+    gsub("4K", "; 4K", .) %>%
+    gsub("Video", "; Video", .) %>%
+    gsub("Audio", "; Audio", .) %>%
+    gsub("Extras", "; Extras", .)
+
+# === Debug =========================================================
 
 ## Parse media values (test) ----
-film <- "Alien"
-media_data_final[which(media_data_final$title == film), ]$bluray_ratings %>%
-    strsplit(split = ";") %>%
-    .[[1]] %>%
-    trimws() %>%
-    strsplit(split = " = ") %>%
-    unlist() %>%
-    matrix(data = ., nrow = length(.) / 2, byrow = TRUE) %>%
-    data.frame(stringsAsFactors = FALSE) %>%
-    set_colnames(c("property", "value")) %>%
-    tibble::as_tibble() %>%
-    dplyr::mutate(
-        property = factor(
-            property,
-            levels = c("3D", "4K", "video", "Audio", "Extras")
-        )
-    )
+# film <- "Alien"
+# media_data_final[which(media_data_final$title == film), ]$bluray_ratings %>%
+#     strsplit(split = ";") %>%
+#     .[[1]] %>%
+#     stringr::str_trim() %>%
+#     strsplit(split = " = ") %>%
+#     unlist() %>%
+#     matrix(data = ., nrow = length(.) / 2, byrow = TRUE) %>%
+#     data.frame(stringsAsFactors = FALSE) %>%
+#     set_colnames(c("property", "value")) %>%
+#     tibble::as_tibble() %>%
+#     dplyr::mutate(
+#         property = factor(
+#             property,
+#             levels = c("3D", "4K", "video", "Audio", "Extras")
+#         )
+#     )
 
 
+## Visualize test ----
 media_data_final %>%
     ggplot() +
     aes(x = forcats::fct_infreq(distributor) %>% forcats::fct_rev()) +
@@ -189,17 +231,5 @@ media_data_final %>%
     coord_flip() +
     xlab("Distributor") +
     ylab("Number of films")
-
-
-
-
-
-
-
-
-
-
-
-
 
 
