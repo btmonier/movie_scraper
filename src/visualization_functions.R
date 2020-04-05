@@ -65,6 +65,7 @@ tmp_ratings %>%
     scale_x_discrete(limits = rev(levels(tmp_ratings$property))) +
     ggtitle(paste("Ratings for:", media_data[film, ]$title)) +
     coord_flip() +
+    theme_minimal() +
     theme(
         aspect.ratio = 0.5,
         axis.title = element_blank(),
