@@ -25,6 +25,7 @@
 library(forcats)
 library(ggplot2)
 library(magrittr)
+library(readr)
 library(rvest)
 library(tibble)
 library(xml2)
@@ -37,6 +38,14 @@ con_base <- "https://www.blu-ray.com/community/collection.php?u=483309&categoryi
 
 ### Media types
 media <- c("dvd" = "21", "blu_ray" = "7", "4K" = "7&4k=1")
+
+
+## Load data (if available) ----
+if (file.exists("data/media_data.csv")) {
+    media_check <- readr::read_csv(file = "data/media_data.csv")
+} else {
+    media_check <- NULL
+}
 
 
 
@@ -79,7 +88,13 @@ for (i in seq_len(length(media))) {
     }
 
     url_data   <- url_data %>% unlist()
-    title_data <- title_data %>% unlist
+    title_data <- title_data %>% unlist()
+
+
+    if (!is.null(media_check)) {
+        title_data <- setdiff(title_data, media_check$title)
+        url_data <- url_data[which(!(title_data %in% media_check$title))]
+    }
 
     # Get unique IDs from blu-ray.com
     br_ids <- url_data %>%
@@ -199,11 +214,17 @@ media_data_final <- do.call("rbind", media_data)
 
 
 ## Write flat file to disk ----
+if (!is.null(media_check)) {
+    append <- TRUE
+} else {
+    append <- FALSE
+}
+
 readr::write_csv(
     x = media_data_final,
-    path = "data/media_data.csv"
+    path = "data/media_data.csv",
+    append = append
 )
-
 
 # === Debug =========================================================
 
