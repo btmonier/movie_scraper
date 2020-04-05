@@ -27,7 +27,7 @@ media_data <- readr::read_csv(file = "data/media_data.csv")
 
 
 ## Parameters ----
-film <- 912 # WIP
+film <- 866 # WIP
 
 
 
@@ -69,7 +69,8 @@ tmp_ratings %>%
     theme(
         aspect.ratio = 0.5,
         axis.title = element_blank(),
-        plot.title = element_text(face = "bold", size = 10)
+        plot.title = element_text(face = "bold", size = 10),
+        panel.border = element_rect(color = "grey", fill = NA)
     )
 
 
