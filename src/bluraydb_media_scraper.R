@@ -92,8 +92,8 @@ for (i in seq_len(length(media))) {
 
 
     if (!is.null(media_check)) {
-        title_data <- setdiff(title_data, media_check$title)
         url_data <- url_data[which(!(title_data %in% media_check$title))]
+        title_data <- setdiff(title_data, media_check$title)
     }
 
     # Get unique IDs from blu-ray.com
@@ -214,94 +214,19 @@ media_data_final <- do.call("rbind", media_data)
 
 
 ## Write flat file to disk ----
+
+### Check for prior data
 if (!is.null(media_check)) {
     append <- TRUE
 } else {
     append <- FALSE
 }
 
+### Write or append
 readr::write_csv(
     x = media_data_final,
     path = "data/media_data.csv",
     append = append
 )
-
-# === Debug =========================================================
-
-## Parse media values (test) ----
-film <- "Alien (1979)"
-media_data_final[which(media_data_final$title == film), ]$bluray_ratings %>%
-    strsplit(split = ";") %>%
-    .[[1]] %>%
-    stringr::str_trim() %>%
-    strsplit(split = " = ") %>%
-    unlist() %>%
-    matrix(data = ., nrow = length(.) / 2, byrow = TRUE) %>%
-    data.frame(stringsAsFactors = FALSE) %>%
-    set_colnames(c("property", "value")) %>%
-    tibble::as_tibble() %>%
-    dplyr::mutate(
-        property = factor(
-            property,
-            levels = c("3D", "4K", "Video", "Audio", "Extras")
-        )
-    )
-
-
-## Visualize test ----
-media_data_final %>%
-    ggplot() +
-    aes(x = forcats::fct_infreq(distributor) %>% forcats::fct_rev()) +
-    geom_bar() +
-    coord_flip() +
-    xlab("Distributor") +
-    ylab("Number of films")
-
-
-
-## Blu-ray ratings ----
-html_data <- "https://www.blu-ray.com/movies/Alita-Battle-Angel-4K-and-3D-Blu-ray/240060/" %>%
-    xml2::read_html()
-bluray_ratings_tmp <- html_data %>%
-    rvest::html_nodes("div#bluray_rating table") %>%
-    rvest::html_text()
-
-bluray_ratings_tmp <- bluray_ratings_tmp %>%
-    stringr::str_split("(?<=[0-9].[0-9])(?=[A-Za-z]|4K)") %>%
-    unlist() %>%
-    stringr::str_replace("\n\n", " = ")
-
-if (!any(grepl("^3D", bluray_ratings_tmp))) {
-    bluray_ratings_tmp <- c("3D = 0.0", bluray_ratings_tmp)
-}
-if (!any(grepl("^4K", bluray_ratings_tmp))) {
-    bluray_ratings_tmp <- c("4K = 0.0", bluray_ratings_tmp)
-}
-if (!any(grepl("^Video", bluray_ratings_tmp))) {
-    bluray_ratings_tmp <- c("Video = 0.0", bluray_ratings_tmp)
-}
-if (!any(grepl("^Audio", bluray_ratings_tmp))) {
-    bluray_ratings_tmp <- c("Audio = 0.0", bluray_ratings_tmp)
-}
-if (!any(grepl("^Extras", bluray_ratings_tmp))) {
-    bluray_ratings_tmp <- c("Extras = 0.0", bluray_ratings_tmp)
-}
-bluray_ratings_tmp <- bluray_ratings_tmp[order(bluray_ratings_tmp)]
-paste(bluray_ratings_tmp, collapse = "; ")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
