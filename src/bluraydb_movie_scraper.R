@@ -138,7 +138,7 @@ for (i in seq_along(mov_urls)) {
 
     check <- html_data %>%
         rvest::html_nodes("div h1.eurostile") %>%
-        rvest::html_text()c
+        rvest::html_text()
 
     if (check == 0) {
         mov_title[i] <- NA
